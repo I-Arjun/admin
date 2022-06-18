@@ -1,5 +1,7 @@
+import 'package:admin/reported_commet.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'comment.dart';
 
 class ReportScreen extends StatefulWidget {
@@ -10,50 +12,47 @@ class ReportScreen extends StatefulWidget {
 }
 
 class _ReportScreenState extends State<ReportScreen> {
-  List<Comment> reportedComments = [];
   List<dynamic> commentsShlok = [];
-  List<Comment> tempComments = [];
 
-  Future<void> fetchCommentData(List<dynamic> commentsShlok) async {
-    commentsShlok.forEach((element) {
-      ()async{
-   await FirebaseFirestore.instance
+  Future<List<Comment>> fetchCommentData(List<dynamic> commentsShlok) async {
+    List<Comment> reportedComments = [];
+    for (int i = 0; i < commentsShlok.length; i++) {
+      await FirebaseFirestore.instance
           .collection("Feed")
-          .doc(element.toString().substring(0, 17))
+          .doc(commentsShlok[i].toString().substring(0, 17))
           .collection("comments")
-          .doc(element)
+          .doc(commentsShlok[i])
           .get()
           .then((value) {
         var comment = value.data();
         if (comment != null) {
           reportedComments.add(Comment(
               text: comment['comment'].toString(),
-              comment_id: element,
+              comment_id: commentsShlok[i],
               useremail: comment['useremail'].toString()));
+          print(reportedComments);
         } else {
           var data = FirebaseFirestore.instance
               .collection("reported_comments")
-              .doc(element.substring(0, 17))
+              .doc(commentsShlok[i].substring(0, 17))
               .get()
               .then((value) {
             List<dynamic> comments = value.data()?['comment-id'];
-            comments.remove(element);
+            comments.remove(commentsShlok[i]);
             FirebaseFirestore.instance
                 .collection("reported_comments")
-                .doc(element.substring(0, 17))
-                .set({"comment-id": comments}).then((value) {});
+                .doc(commentsShlok[i].substring(0, 17))
+                .set({"comment-id": comments});
           });
         }
       });
-      }();
-    });
-    
+    }
+    return Future.value(reportedComments);
   }
 
-  @override
-  void initState() {
-    super.initState();
-    FirebaseFirestore.instance
+  Future<List<dynamic>> loadcomments() async {
+    commentsShlok = [];
+    await FirebaseFirestore.instance
         .collection("reported_comments")
         .get()
         .then((value) {
@@ -66,42 +65,77 @@ class _ReportScreenState extends State<ReportScreen> {
         });
       }
     });
+    return Future.value(commentsShlok);
   }
 
   @override
   Widget build(BuildContext context) {
     var _deivceSize = MediaQuery.of(context).size;
-
+    print("oofofof");
     return Scaffold(
       appBar: AppBar(
         title: const Text("Reports"),
         backgroundColor: Colors.orange,
       ),
       backgroundColor: Colors.orange.shade50,
-      body: FutureBuilder<dynamic>(
-          future: fetchCommentData(commentsShlok),
+      body: StreamBuilder(
+          stream: FirebaseFirestore.instance
+              .collection("reported_comments")
+              .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
+            if (snapshot.hasData) {
+              var data = snapshot.data;
+              var dataa= data.docs;
+              print(data);
+              print("------------");
+              print("------------");
+              print("------------");
+              // for (int i = 0; i < data.length; i++) {
+              //   List<dynamic> comentsslk = [];
+              //   comentsslk = data[i]['comment-id'];
+              //   comentsslk.forEach((element) {
+              //     commentsShlok.add(element);
+              //   });
+              // }
+              return FutureBuilder(
+                  future: fetchCommentData(commentsShlok),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-            // if (reportedComments.) {
-              // print(snapshot.data);
-              return ListView.builder(
-                itemBuilder: (context, index) {
-                  return ReportedShlok(reportedComments[index]);
-                },
-                itemCount: reportedComments.length,
+                    if (snapshot.hasData) {
+                      List<Comment> data = snapshot.data as List<Comment>;
+                      return ListView.builder(
+                        itemBuilder: (context, index) {
+                          return ReportedShlok(data[index]);
+                        },
+                        itemCount: data.length,
+                      );
+                    }
+                    return const Center(
+                      child: Center(
+                        child: Text(
+                          "Not Found",
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    );
+                  });
+            } else {
+              return const Center(
+                child: Center(
+                  child: Text(
+                    "Not Found",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
               );
-            // }
-            // return const Center(
-            //   child: Center(
-            //     child: Text(
-            //       "Not Found",
-            //       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            //     ),
-            //   ),
-            // );
+            }
           }),
     );
   }
@@ -166,6 +200,9 @@ class ReportedShlok extends StatelessWidget {
           OutlinedButton(
               onPressed: () {
                 isDelete ? removeComment() : deleteComment();
+                Provider.of<ReportedCommnet>(context, listen: false)
+                    .removeComment(comment);
+                Navigator.of(context).pop();
               },
               child: Text(isDelete ? "Delete" : "Remove")),
         ],
