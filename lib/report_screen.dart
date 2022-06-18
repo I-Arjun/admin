@@ -1,7 +1,5 @@
-import 'package:admin/reported_commet.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
 import 'comment.dart';
 
 class ReportScreen extends StatefulWidget {
@@ -30,7 +28,6 @@ class _ReportScreenState extends State<ReportScreen> {
               text: comment['comment'].toString(),
               comment_id: commentsShlok[i],
               useremail: comment['useremail'].toString()));
-          print(reportedComments);
         } else {
           var data = FirebaseFirestore.instance
               .collection("reported_comments")
@@ -71,7 +68,6 @@ class _ReportScreenState extends State<ReportScreen> {
   @override
   Widget build(BuildContext context) {
     var _deivceSize = MediaQuery.of(context).size;
-    print("oofofof");
     return Scaffold(
       appBar: AppBar(
         title: const Text("Reports"),
@@ -87,19 +83,19 @@ class _ReportScreenState extends State<ReportScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasData) {
-              var data = snapshot.data;
-              var dataa= data.docs;
-              print(data);
-              print("------------");
-              print("------------");
-              print("------------");
-              // for (int i = 0; i < data.length; i++) {
-              //   List<dynamic> comentsslk = [];
-              //   comentsslk = data[i]['comment-id'];
-              //   comentsslk.forEach((element) {
-              //     commentsShlok.add(element);
-              //   });
-              // }
+              commentsShlok = [];
+              QuerySnapshot<Object>? data =
+                  snapshot.data as QuerySnapshot<Object>;
+              var dataa = data.docs;
+              for (int i = 0; i < dataa.length; i++) {
+                List<dynamic> comentsslk = [];
+                var map = dataa[i].data() as Map<String, dynamic>;
+                comentsslk = map['comment-id'];
+
+                comentsslk.forEach((element) {
+                  commentsShlok.add(element);
+                });
+              }
               return FutureBuilder(
                   future: fetchCommentData(commentsShlok),
                   builder: (context, snapshot) {
@@ -108,7 +104,8 @@ class _ReportScreenState extends State<ReportScreen> {
                     }
 
                     if (snapshot.hasData) {
-                      List<Comment> data = snapshot.data as List<Comment>;
+                      List<Comment> data = [];
+                      data = snapshot.data as List<Comment>;
                       return ListView.builder(
                         itemBuilder: (context, index) {
                           return ReportedShlok(data[index]);
@@ -156,9 +153,7 @@ class ReportedShlok extends StatelessWidget {
       FirebaseFirestore.instance
           .collection("reported_comments")
           .doc(comment.comment_id.substring(0, 17))
-          .set({"comment-id": comments}).then((value) {
-        print("remove");
-      });
+          .set({"comment-id": comments}).then((value) {});
     });
   }
 
@@ -199,9 +194,7 @@ class ReportedShlok extends StatelessWidget {
               child: const Text("Cancel")),
           OutlinedButton(
               onPressed: () {
-                isDelete ? removeComment() : deleteComment();
-                Provider.of<ReportedCommnet>(context, listen: false)
-                    .removeComment(comment);
+                isDelete ? deleteComment() : removeComment();
                 Navigator.of(context).pop();
               },
               child: Text(isDelete ? "Delete" : "Remove")),

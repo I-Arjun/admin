@@ -17,9 +17,21 @@ class HomeScreen extends StatelessWidget {
           child: Card(
             elevation: 3,
             child: Container(
+              height: 150,
+              width: 150,
+              alignment: Alignment.center,
               padding: const EdgeInsets.all(20),
               color: Colors.orange.shade300,
-              child: const Text("Reports"),
+              child: const Text(
+                """
+Reported
+Comments""",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
           onTap: () {
